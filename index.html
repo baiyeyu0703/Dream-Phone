@@ -2,55 +2,54 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- viewport-fit=cover 允许网页延伸到刘海屏和底部 Home 条下方 -->
+    <!-- 1. 强制覆盖所有缩放和安全区域 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- 使状态栏半透明，让网页背景能渗透到最顶部 -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="壁纸">
-    <meta name="mobile-web-app-capable" content="yes">
-    <!-- 主题色设置为壁纸底部的深色，确保过渡极其自然 -->
+    
+    <!-- 2. 将主题色设置为渐变最底部的颜色，防止任何可能的闪烁 -->
     <meta name="theme-color" content="#141c28">
-    <meta name="description" content="全屏动态壁纸 - PWA">
+    
     <title>壁纸</title>
 
     <style>
-        /* ---------- 重置 ---------- */
+        /* ---------- 终极全屏重置 ---------- */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        html,
-        body {
+        html, body {
+            /* 关键：禁止所有方向的滚动和溢出 */
             width: 100%;
-            height: 100%; /* 简单 100%，不再使用带有 Bug 的 -webkit-fill-available */
+            height: 100%;
             overflow: hidden;
-            /* 背景色设为与渐变最底部一致的深蓝黑色，万一出现回弹也不会露出异色 */
-            background: #141c28;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            position: fixed; /* 防止橡皮筋效果 */
+            background: #141c28; /* 与壁纸底部颜色完全一致 */
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
             user-select: none;
-            -webkit-touch-callout: none;
-            /* 禁用默认手势与滚动 */
             touch-action: none;
         }
 
-        /* ---------- 全屏壁纸容器 ---------- */
+        /* ---------- 终极壁纸容器 ---------- */
         .wallpaper-container {
+            /* 使用 fixed 并配合稍微“溢出”的尺寸 */
             position: fixed;
-            /* 【核心修改】不设置 height: 100%，而是通过上下左右定死为 0 */
-            /* 配合 viewport-fit=cover，它会自动强行拉伸填充整个物理屏幕，包括 Home 条 */
-            top: 0;
-            bottom: 0;
+            
+            /* 【核心策略】 */
+            /* 使用 dvh (Dynamic Viewport Height) 适配 iOS 动态高度 */
+            /* 左右拉伸 0，但上下通过负值 inset 强行“挤进”刘海和 Home 条区域 */
+            top: -1px; 
             left: 0;
             right: 0;
+            bottom: -5vh; /* 故意多出 5% 的高度，确保填满底部 Home 条下方 */
             
-            /* iOS风格渐变壁纸 - 柔和的蓝紫调 */
+            width: 100vw;
+            height: 105dvh; /* 105% 的动态视口高度 */
+
+            /* 保持原来的渐变 */
             background:
                 radial-gradient(ellipse 80% 60% at 30% 25%, #5b7cb5 0%, transparent 55%),
                 radial-gradient(ellipse 60% 50% at 70% 30%, #7b6daf 0%, transparent 50%),
@@ -59,11 +58,12 @@
                 radial-gradient(ellipse 50% 40% at 75% 70%, #5e4f8b 0%, transparent 45%),
                 radial-gradient(ellipse 60% 50% at 20% 80%, #2c4a6e 0%, transparent 50%),
                 linear-gradient(180deg, #1a2a3d 0%, #1e2840 25%, #1c2535 50%, #18202d 75%, #141c28 100%);
-            background-color: #141c28;
+            background-size: cover;
+            background-attachment: fixed;
             z-index: 1;
         }
 
-        /* 光斑1 - 浮动 */
+        /* 光斑效果维持原样 */
         .wallpaper-container::before {
             content: '';
             position: absolute;
@@ -75,11 +75,8 @@
             left: 20%;
             filter: blur(30px);
             animation: gentleFloat 12s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 0;
         }
 
-        /* 光斑2 - 浮动 (反向) */
         .wallpaper-container::after {
             content: '';
             position: absolute;
@@ -91,168 +88,29 @@
             right: 15%;
             filter: blur(35px);
             animation: gentleFloat 15s ease-in-out infinite reverse;
-            pointer-events: none;
-            z-index: 0;
         }
 
         @keyframes gentleFloat {
-            0%,
-            100% {
-                transform: translate(0, 0) scale(1);
-            }
-            25% {
-                transform: translate(15px, -20px) scale(1.1);
-            }
-            50% {
-                transform: translate(-10px, -8px) scale(0.95);
-            }
-            75% {
-                transform: translate(-18px, 15px) scale(1.05);
-            }
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-10px, -8px) scale(0.95); }
         }
     </style>
-
-    <!-- PWA Manifest (动态生成) -->
-    <script>
-        (function() {
-            const manifestData = {
-                name: '动态壁纸',
-                short_name: '壁纸',
-                description: '全屏动态壁纸',
-                start_url: './',
-                scope: './',
-                display: 'standalone',
-                orientation: 'portrait',
-                /* 启动页背景色和主题色也同步为壁纸底部暗色，防止启动时闪白边 */
-                background_color: '#141c28',
-                theme_color: '#141c28',
-                lang: 'zh-CN',
-                icons: [{
-                    src: 'data:image/svg+xml,' + encodeURIComponent(
-                        '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#1a2540"/><circle cx="60" cy="70" r="30" fill="rgba(255,255,255,0.08)"/><circle cx="130" cy="120" r="25" fill="rgba(200,180,220,0.06)"/></svg>'
-                    ),
-                    sizes: '192x192',
-                    type: 'image/svg+xml',
-                    purpose: 'any'
-                }, {
-                    src: 'data:image/svg+xml,' + encodeURIComponent(
-                        '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#1a2540"/><circle cx="160" cy="190" r="80" fill="rgba(255,255,255,0.08)"/><circle cx="350" cy="320" r="65" fill="rgba(200,180,220,0.06)"/></svg>'
-                    ),
-                    sizes: '512x512',
-                    type: 'image/svg+xml',
-                    purpose: 'any'
-                }]
-            };
-
-            const manifestBlob = new Blob([JSON.stringify(manifestData)], {
-                type: 'application/manifest+json'
-            });
-            const manifestUrl = URL.createObjectURL(manifestBlob);
-
-            const linkEl = document.createElement('link');
-            linkEl.rel = 'manifest';
-            linkEl.href = manifestUrl;
-            document.head.appendChild(linkEl);
-
-            window._manifestUrl = manifestUrl;
-        })();
-    </script>
 </head>
-
 <body>
-    <!-- 全屏壁纸容器 -->
-    <div class="wallpaper-container" id="wallpaperContainer"></div>
+    <div class="wallpaper-container"></div>
 
     <script>
-        (function() {
-            'use strict';
+        // 极致禁用滚动：防止任何可能的拉动导致露出底色
+        window.addEventListener('scroll', (e) => e.preventDefault(), { passive: false });
+        document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
-            // ============ PWA Service Worker ============
-            if ('serviceWorker' in navigator) {
-                const swCode = `
-                        const CACHE_NAME = 'wallpaper-pwa-v1';
-                        const urlsToCache = [
-                            './',
-                            './index.html',
-                            './?standalone=true'
-                        ];
-
-                        self.addEventListener('install', (event) => {
-                            event.waitUntil(
-                                caches.open(CACHE_NAME).then((cache) => {
-                                    return cache.addAll(urlsToCache).catch(() => Promise.resolve());
-                                }).then(() => self.skipWaiting())
-                            );
-                        });
-
-                        self.addEventListener('activate', (event) => {
-                            event.waitUntil(
-                                caches.keys().then((cacheNames) => {
-                                    return Promise.all(
-                                        cacheNames.filter((name) => name !== CACHE_NAME)
-                                        .map((name) => caches.delete(name))
-                                    );
-                                }).then(() => self.clients.claim())
-                            );
-                        });
-
-                        self.addEventListener('fetch', (event) => {
-                            if (event.request.method !== 'GET') return;
-                            event.respondWith(
-                                caches.match(event.request).then((cached) => {
-                                    if (cached) return cached;
-                                    return fetch(event.request).then((response) => {
-                                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                                            return response;
-                                        }
-                                        const toCache = response.clone();
-                                        caches.open(CACHE_NAME).then((cache) => {
-                                            cache.put(event.request, toCache);
-                                        });
-                                        return response;
-                                        // 优雅降级：如果找不到，退回到根路径而非白屏
-                                    }).catch(() => caches.match('./') || new Response('', { status: 404 }));
-                                })
-                            );
-                        });
-                    `;
-
-                const swBlob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(swBlob);
-
-                navigator.serviceWorker.register(swUrl, { scope: './' })
-                    .then((registration) => {
-                        window._swUrl = swUrl;
-                        window._swRegistration = registration;
-                    })
-                    .catch((err) => {
-                        navigator.serviceWorker.register('./sw.js', { scope: './' })
-                            .then((reg) => {
-                                window._swRegistration = reg;
-                            });
-                    });
-            }
-
-            // ============ 极致防止回弹与滑动拖拽 ============
-            // 彻底禁用拖拽页面的橡皮筋回弹效果
-            document.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-            }, { passive: false });
-
-            // 防止双击缩放
-            document.addEventListener('gesturestart', (e) => e.preventDefault());
-            document.addEventListener('gesturechange', (e) => e.preventDefault());
-            document.addEventListener('gestureend', (e) => e.preventDefault());
-
-            let lastTouchEnd = 0;
-            document.addEventListener('touchend', (e) => {
-                const now = Date.now();
-                if (now - lastTouchEnd <= 300) {
-                    e.preventDefault();
-                }
-                lastTouchEnd = now;
-            }, { passive: false });
-        })();
+        // 防止双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) e.preventDefault();
+            lastTouchEnd = now;
+        }, false);
     </script>
 </body>
 </html>
