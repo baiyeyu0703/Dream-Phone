@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="壁纸">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0d0d0f">
+    <meta name="description" content="全屏动态壁纸 - PWA">
+    <title>壁纸</title>
+
+    <style>
+        /* ---------- 重置 ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0d0d0f;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+        }
+
+        /* ---------- 全屏壁纸容器 ---------- */
+        .wallpaper-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            /* iOS风格渐变壁纸 - 柔和的蓝紫调 */
+            background:
+                radial-gradient(ellipse 80% 60% at 30% 25%, #5b7cb5 0%, transparent 55%),
+                radial-gradient(ellipse 60% 50% at 70% 30%, #7b6daf 0%, transparent 50%),
+                radial-gradient(ellipse 70% 55% at 50% 45%, #4a6d9e 0%, transparent 50%),
+                radial-gradient(ellipse 90% 60% at 40% 65%, #3d5a85 0%, transparent 55%),
+                radial-gradient(ellipse 50% 40% at 75% 70%, #5e4f8b 0%, transparent 45%),
+                radial-gradient(ellipse 60% 50% at 20% 80%, #2c4a6e 0%, transparent 50%),
+                linear-gradient(180deg, #1a2a3d 0%, #1e2840 25%, #1c2535 50%, #18202d 75%, #141c28 100%);
+            background-color: #1a2540;
+            z-index: 1;
+        }
+
+        /* 光斑1 - 浮动 */
+        .wallpaper-container::before {
+            content: '';
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+            top: 15%;
+            left: 20%;
+            filter: blur(30px);
+            animation: gentleFloat 12s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 光斑2 - 浮动 (反向) */
+        .wallpaper-container::after {
+            content: '';
+            position: absolute;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(200, 180, 220, 0.10) 0%, transparent 70%);
+            bottom: 25%;
+            right: 15%;
+            filter: blur(35px);
+            animation: gentleFloat 15s ease-in-out infinite reverse;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes gentleFloat {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(15px, -20px) scale(1.1);
+            }
+            50% {
+                transform: translate(-10px, -8px) scale(0.95);
+            }
+            75% {
+                transform: translate(-18px, 15px) scale(1.05);
+            }
+        }
+
+        /* ---------- 防止手势缩放 ---------- */
+        @media (max-width: 480px) {
+            /* 无额外样式 */
+        }
+
+        /* ---------- 横屏适配 ---------- */
+        @media (orientation: landscape) and (max-height: 500px) {
+            /* 保持全屏 */
+        }
+
+        /* ---------- 暗色模式（跟随系统） ---------- */
+        @media (prefers-color-scheme: dark) {
+            /* 已暗色 */
+        }
+
+        /* ---------- 打印样式 ---------- */
+        @media print {
+            .wallpaper-container {
+                filter: none !important;
+            }
+        }
+    </style>
+
+    <!-- PWA Manifest (通过 data URI 内联，兼容性更好) -->
+    <link rel="manifest" id="manifestLink">
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ============ 构建 Manifest 并转换为 data URI ============
+            const manifest = {
+                name: '动态壁纸',
+                short_name: '壁纸',
+                description: '全屏动态壁纸',
+                start_url: './',
+                scope: './',
+                display: 'standalone',
+                orientation: 'portrait',
+                background_color: '#0d0d0f',
+                theme_color: '#0d0d0f',
+                lang: 'zh-CN',
+                icons: [{
+                    src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%231a2540'/%3E%3Ccircle cx='60' cy='70' r='30' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='130' cy='120' r='25' fill='rgba(200,180,220,0.06)'/%3E%3C/svg%3E",
+                    sizes: '192x192',
+                    type: 'image/svg+xml',
+                    purpose: 'any'
+                }, {
+                    src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231a2540'/%3E%3Ccircle cx='160' cy='190' r='80' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='350' cy='320' r='65' fill='rgba(200,180,220,0.06)'/%3E%3C/svg%3E",
+                    sizes: '512x512',
+                    type: 'image/svg+xml',
+                    purpose: 'any'
+                }]
+            };
+
+            const json = JSON.stringify(manifest);
+            // 转换为 base64 (处理 Unicode)
+            const base64 = btoa(unescape(encodeURIComponent(json)));
+            const manifestUrl = 'data:application/json;base64,' + base64;
+
+            // 设置 manifest link
+            const link = document.getElementById('manifestLink');
+            if (link) {
+                link.href = manifestUrl;
+            }
+
+            // ============ Service Worker (可选，增强离线体验) ============
+            if ('serviceWorker' in navigator) {
+                // 尝试注册 Service Worker，若失败不影响 PWA 安装
+                const swCode = `
+                    const CACHE_NAME = 'wallpaper-pwa-v1';
+                    const urlsToCache = [
+                        './',
+                        './index.html',
+                        './?standalone=true'
+                    ];
+
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then((cache) => {
+                                return cache.addAll(urlsToCache).catch(() => Promise.resolve());
+                            }).then(() => self.skipWaiting())
+                        );
+                    });
+
+                    self.addEventListener('activate', (event) => {
+                        event.waitUntil(
+                            caches.keys().then((cacheNames) => {
+                                return Promise.all(
+                                    cacheNames.filter((name) => name !== CACHE_NAME)
+                                    .map((name) => caches.delete(name))
+                                );
+                            }).then(() => self.clients.claim())
+                        );
+                    });
+
+                    self.addEventListener('fetch', (event) => {
+                        if (event.request.method !== 'GET') return;
+                        event.respondWith(
+                            caches.match(event.request).then((cached) => {
+                                if (cached) return cached;
+                                return fetch(event.request).then((response) => {
+                                    if (!response || response.status !== 200 || response.type !== 'basic') {
+                                        return response;
+                                    }
+                                    const toCache = response.clone();
+                                    caches.open(CACHE_NAME).then((cache) => {
+                                        cache.put(event.request, toCache);
+                                    });
+                                    return response;
+                                }).catch(() => caches.match('./'));
+                            })
+                        );
+                    });
+                `;
+
+                try {
+                    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(swBlob);
+                    navigator.serviceWorker.register(swUrl, { scope: './' })
+                        .then((registration) => {
+                            console.log('✅ Service Worker 注册成功:', registration.scope);
+                        })
+                        .catch(() => {
+                            // 忽略 SW 注册失败，不影响 PWA 核心功能
+                            console.info('ℹ️ Service Worker 注册失败，PWA 仍可安装');
+                        });
+                } catch (e) {
+                    console.info('ℹ️ Service Worker 不可用，PWA 安装不受影响');
+                }
+            }
+
+            // ============ 防止手势缩放 ============
+            document.addEventListener('gesturestart', (e) => e.preventDefault());
+            document.addEventListener('gesturechange', (e) => e.preventDefault());
+            document.addEventListener('gestureend', (e) => e.preventDefault());
+
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', (e) => {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, { passive: false });
+
+            console.log('🖼️ 全屏动态壁纸已启动 (无交互)');
+            console.log('   · 无边框 · 无灵动岛 · 全屏适配');
+            console.log('   · PWA 可安装 (manifest 已内联)');
+        })();
+    </script>
+</head>
+
+<body>
+    <!-- 全屏壁纸容器 -->
+    <div class="wallpaper-container" id="wallpaperContainer"></div>
+</body>
+</html>
