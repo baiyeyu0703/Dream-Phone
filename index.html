@@ -2,54 +2,54 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 1. 强制覆盖所有缩放和安全区域 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <!-- 1. 基础配置：viewport-fit=cover 必须保留 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- 2. 状态栏设置为黑色透明，确保顶部也完全沉浸 -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="壁纸">
     
-    <!-- 2. 将主题色设置为渐变最底部的颜色，防止任何可能的闪烁 -->
+    <!-- 3. 将主题色设为渐变最底部的颜色，欺骗系统渲染层 -->
     <meta name="theme-color" content="#141c28">
-    
     <title>壁纸</title>
 
     <style>
-        /* ---------- 终极全屏重置 ---------- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* ---------- 强制全屏重置 ---------- */
+        html {
+            /* 确保 html 自身没有间隙 */
+            height: 100%;
+            overflow: hidden;
+            background-color: #141c28; /* 兜底颜色 */
         }
 
-        html, body {
-            /* 关键：禁止所有方向的滚动和溢出 */
+        body {
+            margin: 0;
+            padding: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
-            position: fixed; /* 防止橡皮筋效果 */
-            background: #141c28; /* 与壁纸底部颜色完全一致 */
+            /* 关键：使用 fixed 锁定，防止任何手势拖拽出白边 */
+            position: fixed;
+            background-color: #141c28;
             -webkit-tap-highlight-color: transparent;
-            user-select: none;
             touch-action: none;
         }
 
-        /* ---------- 终极壁纸容器 ---------- */
+        /* ---------- 物理溢出容器 ---------- */
         .wallpaper-container {
-            /* 使用 fixed 并配合稍微“溢出”的尺寸 */
+            /* 【终极核心】：不再设置 100% 或 100vh */
+            /* 而是使用 fixed 定位并将上下左右全部“顶”出屏幕之外 */
             position: fixed;
+            top: -100px;    /* 向上溢出，盖住刘海和状态栏 */
+            left: -100px;   /* 向左溢出 */
+            right: -100px;  /* 向右溢出 */
+            bottom: -100px; /* 向下溢出，强行盖住底部 Home 条安全区 */
             
-            /* 【核心策略】 */
-            /* 使用 dvh (Dynamic Viewport Height) 适配 iOS 动态高度 */
-            /* 左右拉伸 0，但上下通过负值 inset 强行“挤进”刘海和 Home 条区域 */
-            top: -1px; 
-            left: 0;
-            right: 0;
-            bottom: -5vh; /* 故意多出 5% 的高度，确保填满底部 Home 条下方 */
-            
-            width: 100vw;
-            height: 105dvh; /* 105% 的动态视口高度 */
+            /* 确保背景绘制区域覆盖整个溢出空间 */
+            z-index: 1;
+            display: block;
 
-            /* 保持原来的渐变 */
+            /* 保持原来的渐变样式 */
             background:
                 radial-gradient(ellipse 80% 60% at 30% 25%, #5b7cb5 0%, transparent 55%),
                 radial-gradient(ellipse 60% 50% at 70% 30%, #7b6daf 0%, transparent 50%),
@@ -59,11 +59,9 @@
                 radial-gradient(ellipse 60% 50% at 20% 80%, #2c4a6e 0%, transparent 50%),
                 linear-gradient(180deg, #1a2a3d 0%, #1e2840 25%, #1c2535 50%, #18202d 75%, #141c28 100%);
             background-size: cover;
-            background-attachment: fixed;
-            z-index: 1;
         }
 
-        /* 光斑效果维持原样 */
+        /* 装饰用的光斑：因为容器溢出了，光斑的定位需要稍微调整 */
         .wallpaper-container::before {
             content: '';
             position: absolute;
@@ -71,8 +69,8 @@
             height: 200px;
             border-radius: 50%;
             background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
-            top: 15%;
-            left: 20%;
+            top: 25%;  /* 调整位置 */
+            left: 25%;
             filter: blur(30px);
             animation: gentleFloat 12s ease-in-out infinite;
         }
@@ -84,33 +82,42 @@
             height: 160px;
             border-radius: 50%;
             background: radial-gradient(circle, rgba(200, 180, 220, 0.10) 0%, transparent 70%);
-            bottom: 25%;
-            right: 15%;
+            bottom: 30%;
+            right: 25%;
             filter: blur(35px);
             animation: gentleFloat 15s ease-in-out infinite reverse;
         }
 
         @keyframes gentleFloat {
             0%, 100% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(-10px, -8px) scale(0.95); }
+            50% { transform: translate(-15px, -15px) scale(1.1); }
         }
     </style>
 </head>
+
 <body>
+    <!-- 溢出容器 -->
     <div class="wallpaper-container"></div>
 
     <script>
-        // 极致禁用滚动：防止任何可能的拉动导致露出底色
-        window.addEventListener('scroll', (e) => e.preventDefault(), { passive: false });
-        document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-
-        // 防止双击缩放
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', (e) => {
-            const now = Date.now();
-            if (now - lastTouchEnd <= 300) e.preventDefault();
-            lastTouchEnd = now;
-        }, false);
+        // 彻底切断任何形式的滚动
+        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+        
+        // 动态 manifest 逻辑（同步 theme_color）
+        (function() {
+            const manifestData = {
+                display: 'standalone',
+                start_url: './',
+                background_color: '#141c28', // 必须与 CSS 底部颜色一致
+                theme_color: '#141c28',
+                icons: [{ src: '', sizes: '192x192', type: 'image/png' }] // 简写
+            };
+            const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/manifest+json' });
+            const linkEl = document.createElement('link');
+            linkEl.rel = 'manifest';
+            linkEl.href = URL.createObjectURL(manifestBlob);
+            document.head.appendChild(linkEl);
+        })();
     </script>
 </body>
 </html>
