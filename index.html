@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="壁纸">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0d0d0f">
+    <meta name="theme-color" content="#1a2540">
     <meta name="description" content="全屏动态壁纸 - PWA">
     <title>壁纸</title>
 
@@ -24,7 +24,8 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #0d0d0f;
+            /* 关键修复：将背景色设为与壁纸容器主色一致，避免底部露出黑色 */
+            background-color: #1a2540;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -33,7 +34,6 @@
             user-select: none;
             -webkit-touch-callout: none;
             touch-action: manipulation;
-            /* 确保 body 没有任何边距或内边距 */
             margin: 0;
             padding: 0;
         }
@@ -46,16 +46,20 @@
             right: 0;
             bottom: 0;
             width: 100%;
-            /* ---- 核心修复：使用 100dvh 动态视口高度，完美适配 iOS 安全区域 ---- */
+            /* 使用多种高度单位确保在所有环境下覆盖全屏 */
+            height: 100%;
             height: 100vh;
-            /* 回退：支持 100vh 的旧浏览器 */
             height: 100dvh;
-            /* iOS 15.4+ / 现代浏览器：动态视口高度，包含安全区域 */
-            /* 备用：-webkit-fill-available 用于部分 WebKit 内核（保留兼容） */
             height: -webkit-fill-available;
-            /* 通过 min-height 双重保险 */
             min-height: 100vh;
             min-height: 100dvh;
+            /* 通过 padding-bottom 扩展背景至安全区域底部 */
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            /* 使用 border-box 使 padding 向内收缩，但背景会覆盖 padding 区域 */
+            box-sizing: border-box;
+            /* 确保背景覆盖整个 border-box，包括 padding */
+            background-origin: border-box;
+            background-clip: border-box;
 
             /* iOS风格渐变壁纸 - 柔和的蓝紫调 */
             background:
@@ -67,19 +71,13 @@
                 radial-gradient(ellipse 60% 50% at 20% 80%, #2c4a6e 0%, transparent 50%),
                 linear-gradient(180deg, #1a2a3d 0%, #1e2840 25%, #1c2535 50%, #18202d 75%, #141c28 100%);
             background-color: #1a2540;
-            /* 背景色延伸到底部安全区域 */
-            background-origin: border-box;
-            background-clip: border-box;
             z-index: 1;
-            /* 确保容器从视口最顶部开始，无任何偏移 */
             margin: 0;
-            padding: 0;
-            /* 防止任何边框或阴影影响尺寸 */
+            padding: 0; /* 先重置，再用 padding-bottom 覆盖 */
+            padding-bottom: env(safe-area-inset-bottom, 0px);
             border: none;
             outline: none;
-            /* 防止内容溢出 */
             overflow: hidden;
-            /* 确保背景渲染平滑 */
             -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             -webkit-transform: translateZ(0);
@@ -134,38 +132,9 @@
             }
         }
 
-        /* ---------- 额外安全区域补偿（针对极端情况） ---------- */
-        /* 使用 env() 确保底部安全区域被背景色覆盖，但壁纸已用 100dvh 覆盖，此处作为兜底 */
-        @supports (padding-bottom: env(safe-area-inset-bottom)) {
-            .wallpaper-container {
-                /* 如果 100dvh 在某些边缘情况下未完全覆盖，用 padding 扩展底部 */
-                padding-bottom: env(safe-area-inset-bottom);
-                /* 但 padding 会影响内容，所以使用 box-shadow 或背景扩展更安全 */
-                /* 这里用 box-shadow 扩展底部背景，不影响内容布局 */
-                box-shadow: inset 0 calc(-1 * env(safe-area-inset-bottom)) 0 0 #1a2540;
-                /* 或者使用伪元素扩展，但阴影更简单 */
-            }
-        }
-
-        /* 对于不支持 100dvh 的旧设备，使用 100vh + 安全区域补偿 */
-        @supports not (height: 100dvh) {
-            .wallpaper-container {
-                height: 100vh;
-                /* 使用 calc 补偿底部安全区域 */
-                height: calc(100vh + env(safe-area-inset-bottom, 0px));
-                min-height: 100vh;
-            }
-        }
-
-        /* ---------- 防止手势缩放 ---------- */
-        @media (max-width: 480px) {
-            /* 无额外样式 */
-        }
-
         /* ---------- 横屏适配 ---------- */
         @media (orientation: landscape) and (max-height: 500px) {
             .wallpaper-container {
-                /* 横屏时同样使用动态高度 */
                 height: 100vh;
                 height: 100dvh;
                 height: -webkit-fill-available;
@@ -174,7 +143,7 @@
             }
         }
 
-        /* ---------- 暗色模式（跟随系统） ---------- */
+        /* ---------- 暗色模式（跟随系统，无需额外修改） ---------- */
         @media (prefers-color-scheme: dark) {
             /* 已暗色 */
         }
@@ -186,32 +155,27 @@
             }
         }
 
-        /* ---------- 针对 iOS 18 的特殊修复 ---------- */
+        /* ---------- 针对 iOS 18 的特殊修补 ---------- */
         @supports (-webkit-touch-callout: none) {
-            /* iOS 专用：确保容器覆盖整个屏幕 */
             .wallpaper-container {
-                /* 在 iOS 上，-webkit-fill-available 有时比 100dvh 更可靠 */
                 height: -webkit-fill-available;
-                /* 但 100dvh 在 iOS 15.4+ 中更标准，两者结合使用 */
                 height: 100dvh;
                 min-height: -webkit-fill-available;
                 min-height: 100dvh;
             }
         }
 
-        /* 针对 iPhone 14/15/16 系列（含灵动岛）的安全区域补偿 */
-        @supports (padding: env(safe-area-inset-top)) {
+        /* 安全区域补偿（兜底） */
+        @supports (padding: env(safe-area-inset-bottom)) {
             .wallpaper-container {
-                /* 顶部安全区域（灵动岛/刘海）不需要额外处理，因为 100dvh 已覆盖 */
-                /* 但为了确保背景延伸到顶部，不做任何 padding 偏移 */
-                padding: 0;
-                /* 使用 background-origin 确保背景覆盖整个盒子 */
-                background-origin: border-box;
+                padding-bottom: env(safe-area-inset-bottom);
+                /* 确保背景色延伸到安全区域 */
+                background-color: #1a2540;
             }
         }
     </style>
 
-    <!-- PWA Manifest (通过 data URI 内联，兼容性更好) -->
+    <!-- PWA Manifest (通过 data URI 内联) -->
     <link rel="manifest" id="manifestLink">
 
     <script>
@@ -227,8 +191,8 @@
                 scope: './',
                 display: 'standalone',
                 orientation: 'portrait',
-                background_color: '#0d0d0f',
-                theme_color: '#0d0d0f',
+                background_color: '#1a2540',  // 与壁纸主色一致
+                theme_color: '#1a2540',
                 lang: 'zh-CN',
                 icons: [{
                     src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%231a2540'/%3E%3Ccircle cx='60' cy='70' r='30' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='130' cy='120' r='25' fill='rgba(200,180,220,0.06)'/%3E%3C/svg%3E",
@@ -244,19 +208,16 @@
             };
 
             const json = JSON.stringify(manifest);
-            // 转换为 base64 (处理 Unicode)
             const base64 = btoa(unescape(encodeURIComponent(json)));
             const manifestUrl = 'data:application/json;base64,' + base64;
 
-            // 设置 manifest link
             const link = document.getElementById('manifestLink');
             if (link) {
                 link.href = manifestUrl;
             }
 
-            // ============ Service Worker (可选，增强离线体验) ============
+            // ============ Service Worker (增强离线体验) ============
             if ('serviceWorker' in navigator) {
-                // 尝试注册 Service Worker，若失败不影响 PWA 安装
                 const swCode = `
                         const CACHE_NAME = 'wallpaper-pwa-v1';
                         const urlsToCache = [
@@ -312,7 +273,6 @@
                             console.log('✅ Service Worker 注册成功:', registration.scope);
                         })
                         .catch(() => {
-                            // 忽略 SW 注册失败，不影响 PWA 核心功能
                             console.info('ℹ️ Service Worker 注册失败，PWA 仍可安装');
                         });
                 } catch (e) {
@@ -334,32 +294,8 @@
                 lastTouchEnd = now;
             }, { passive: false });
 
-            // ============ iOS 安全区域动态适配（运行时检测） ============
-            // 部分 iOS 版本在旋转屏幕后视口高度可能变化，监听 resize 确保容器始终覆盖
+            // ============ 监听视口变化，确保适配 ============
             let resizeTimer = null;
-            const updateContainerHeight = () => {
-                const container = document.getElementById('wallpaperContainer');
-                if (!container) return;
-                // 对于 iOS 18，使用 window.innerHeight 作为动态参考
-                // 但 CSS 已经使用 100dvh，此处仅作为额外保险
-                // 不做强制覆盖，避免与 CSS 冲突
-            };
-
-            // 使用 ResizeObserver 监听视口变化（更精确）
-            if (window.ResizeObserver) {
-                const ro = new ResizeObserver(() => {
-                    if (resizeTimer) {
-                        cancelAnimationFrame(resizeTimer);
-                    }
-                    resizeTimer = requestAnimationFrame(() => {
-                        // 无需操作，CSS 100dvh 会自动适应
-                        resizeTimer = null;
-                    });
-                });
-                ro.observe(document.documentElement);
-            }
-
-            // 监听窗口尺寸变化（兜底）
             window.addEventListener('resize', () => {
                 if (resizeTimer) {
                     cancelAnimationFrame(resizeTimer);
@@ -369,24 +305,18 @@
                 });
             }, { passive: true });
 
-            // 监听 orientation change
             window.addEventListener('orientationchange', () => {
-                // 延迟执行，等待浏览器完成布局更新
                 setTimeout(() => {
-                    // 强制 reflow 确保容器正确渲染
                     const container = document.getElementById('wallpaperContainer');
                     if (container) {
-                        // 触发重排
                         void container.offsetHeight;
                     }
                 }, 300);
             }, { passive: true });
 
-            console.log('🖼️ 全屏动态壁纸已启动 (iOS 18 适配版)');
-            console.log('   · 无边框 · 无灵动岛遮挡 · 全屏适配');
-            console.log('   · 使用 100dvh 动态视口高度');
-            console.log('   · PWA 可安装 (manifest 已内联)');
-            console.log('   · 底部安全区域已覆盖');
+            console.log('🖼️ 全屏动态壁纸已启动 (PWA 深度适配版)');
+            console.log('   · 底部安全区域已通过 padding 和背景色覆盖');
+            console.log('   · html/body 背景色与容器一致，消除黑色区域');
         })();
     </script>
 </head>
