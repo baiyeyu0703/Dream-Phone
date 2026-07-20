@@ -2,55 +2,60 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 关键 1: viewport-fit=cover 告诉 iOS 将内容填充到物理屏幕边缘 -->
+    <!-- 1. 视口适配：必须包含 viewport-fit=cover -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    
+    <!-- 2. iOS 专有配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- 关键 2: 透明状态栏模式 -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="壁纸">
     
-    <!-- 关键 3: 主题色锁死为渐变底部的深色 -->
+    <!-- 3. 安卓与通用配置：theme-color 是安卓消除底部导航栏白边的关键 -->
+    <!-- 它会告诉安卓系统：将虚拟按键区域或手势指示条区域染成这个颜色 -->
     <meta name="theme-color" content="#141c28">
+    <meta name="mobile-web-app-capable" content="yes">
+    
     <title>壁纸</title>
 
     <style>
-        /* ---------- 统一 100vh 布局 ---------- */
+        /* ---------- 100vh 统一布局策略 ---------- */
         
-        /* 1. 最外层 html 容器 */
+        /* 根容器：直接承载背景，确保即便页面未加载完，系统渲染的也是这个颜色 */
         html {
             width: 100vw;
-            height: 100vh; /* 统一使用 100vh */
+            height: 100vh;
             margin: 0;
             padding: 0;
             overflow: hidden;
-            /* 将壁纸直接应用在 html 上，确保系统安全区域能读取到颜色 */
-            background: #141c28 linear-gradient(180deg, #1a2a3d 0%, #1e2840 25%, #1c2535 50%, #18202d 75%, #141c28 100%);
-            background-attachment: fixed;
+            background-color: #141c28; /* 与渐变底部完全一致 */
+            /* iOS 渐变兜底 */
+            background-image: linear-gradient(180deg, #1a2a3d 0%, #1e2840 25%, #1c2535 50%, #18202d 75%, #141c28 100%);
         }
 
-        /* 2. Body 容器 */
         body {
             width: 100vw;
-            height: 100vh; /* 统一使用 100vh */
+            height: 100vh;
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background: transparent; /* 透明，显示 html 的背景 */
+            position: fixed; /* 锁定位置 */
+            background: transparent;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
+            /* 关键：防止安卓 Edge/Chrome 的下拉刷新和左右滑动手势出现白边 */
+            overscroll-behavior: none;
             touch-action: none;
         }
 
-        /* 3. 壁纸主容器 (相当于 app 外壳) */
-        .wallpaper-container {
+        /* 壁纸/App 外壳容器 */
+        .app-shell {
             width: 100vw;
-            height: 100vh; /* 统一使用 100vh */
+            height: 100vh;
             position: absolute;
             top: 0;
             left: 0;
             z-index: 1;
-            
-            /* iOS 风格多重径向渐变 */
+            /* 完整的 iOS 风格渐变 */
             background:
                 radial-gradient(ellipse 80% 60% at 30% 25%, #5b7cb5 0%, transparent 55%),
                 radial-gradient(ellipse 60% 50% at 70% 30%, #7b6daf 0%, transparent 50%),
@@ -62,62 +67,55 @@
             background-size: cover;
         }
 
-        /* 4. 如果有 iframe 父容器或 Home 容器，请确保类名对应 */
-        .home-container, .iframe-wrapper {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* 光斑装饰层 */
-        .wallpaper-container::before, 
-        .wallpaper-container::after {
+        /* 装饰光斑层 */
+        .app-shell::before, .app-shell::after {
             content: '';
             position: absolute;
             border-radius: 50%;
             filter: blur(40px);
             pointer-events: none;
-            z-index: 0;
             animation: gentleFloat 12s ease-in-out infinite;
         }
 
-        .wallpaper-container::before {
+        .app-shell::before {
             width: 40vh; height: 40vh;
             background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
             top: 10%; left: 10%;
         }
 
-        .wallpaper-container::after {
+        .app-shell::after {
             width: 30vh; height: 30vh;
             background: radial-gradient(circle, rgba(200, 180, 220, 0.08) 0%, transparent 70%);
             bottom: 20%; right: 10%;
-            animation-delay: -2s;
+            animation-delay: -3s;
         }
 
         @keyframes gentleFloat {
             0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(-20px, -20px); }
+            50% { transform: translate(-15px, -15px); }
         }
     </style>
 </head>
 <body>
-    <!-- app 外壳 / Home 容器 -->
-    <div class="wallpaper-container" id="app"></div>
+    <!-- 统一后的 App 容器 -->
+    <div class="app-shell" id="app"></div>
 
     <script>
-        // 彻底禁用滚动和橡皮筋效果
+        // 彻底拦截所有原生滚动
         document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
-        // 动态生成 Manifest，确保 display 设为 standalone 或 fullscreen
+        // 生成针对安卓与iOS优化的 Web Manifest
         (function() {
             const manifestData = {
                 name: '动态壁纸',
                 short_name: '壁纸',
                 start_url: './',
+                // 安卓 Edge 推荐使用 standalone
+                // 如果想更彻底隐藏安卓顶部的电池电量栏，可尝试改为 'fullscreen'
                 display: 'standalone', 
-                background_color: '#141c28', 
-                theme_color: '#141c28',
+                orientation: 'portrait',
+                background_color: '#141c28', // 安卓启动页背景色
+                theme_color: '#141c28',      // 安卓系统工具栏颜色
                 icons: [{
                     src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" fill="%23141c28"/></svg>',
                     sizes: '192x192',
