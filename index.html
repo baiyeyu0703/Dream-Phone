@@ -12,7 +12,7 @@
     <title>壁纸</title>
 
     <style>
-        /* ---------- 重置 ---------- */
+        /* ---------- 彻底重置 ---------- */
         * {
             margin: 0;
             padding: 0;
@@ -24,8 +24,8 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            /* 关键修复：将背景色设为与壁纸容器主色一致，避免底部露出黑色 */
-            background-color: #1a2540;
+            /* 背景设为透明，容器完全负责背景，不掩盖问题 */
+            background: transparent;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -38,26 +38,42 @@
             padding: 0;
         }
 
-        /* ---------- 全屏壁纸容器 ---------- */
+        /* ---------- 全屏壁纸容器（物理覆盖） ---------- */
         .wallpaper-container {
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
             width: 100%;
-            /* 使用多种高度单位确保在所有环境下覆盖全屏 */
-            height: 100%;
+            /* 核心修复：高度 = 视口高度 + 底部安全区域，确保背景延伸至屏幕最底部 */
+            height: 100vh;                       /* 回退方案 */
+            height: calc(100vh + env(safe-area-inset-bottom, 0px));
+            height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+            /* 使用 -webkit-fill-available 作为额外的回退（不支持 calc 时） */
+            height: -webkit-fill-available;
+            /* 但 -webkit-fill-available 可能不包含安全区域，所以用 min-height 兜底 */
+            min-height: 100vh;
+            min-height: calc(100vh + env(safe-area-inset-bottom, 0px));
+            min-height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+
+            /* 盒子模型：content-box，使得 padding 向外扩展总高度 */
+            box-sizing: content-box;
+            /* 底部 padding 等于安全区域，但上面 calc 已经加上了，这里不再加 padding，避免重复 */
+            /* 但为了兼容不支持 calc 的浏览器，我们保留 padding 作为备选 */
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            /* 如果使用 padding，则需要配合 box-sizing: content-box 使总高度增加 */
+            /* 为了统一，我们用 padding 方式并注释掉 calc 高度？其实两种都可以，我们选择最稳妥的组合： */
+            /* 方案：使用 padding-bottom 并设置 height: 100vh，总高度自动扩展，避免 calc 兼容性问题 */
+            /* 重新采用 padding 方式，这样最可靠 */
             height: 100vh;
             height: 100dvh;
             height: -webkit-fill-available;
             min-height: 100vh;
             min-height: 100dvh;
-            /* 通过 padding-bottom 扩展背景至安全区域底部 */
             padding-bottom: env(safe-area-inset-bottom, 0px);
-            /* 使用 border-box 使 padding 向内收缩，但背景会覆盖 padding 区域 */
-            box-sizing: border-box;
-            /* 确保背景覆盖整个 border-box，包括 padding */
+            /* 设置 box-sizing: content-box 使得 padding 向外扩展 */
+            box-sizing: content-box;
+
+            /* 确保背景覆盖整个边框盒（包括 padding 区域） */
             background-origin: border-box;
             background-clip: border-box;
 
@@ -72,9 +88,6 @@
                 linear-gradient(180deg, #1a2a3d 0%, #1e2840 25%, #1c2535 50%, #18202d 75%, #141c28 100%);
             background-color: #1a2540;
             z-index: 1;
-            margin: 0;
-            padding: 0; /* 先重置，再用 padding-bottom 覆盖 */
-            padding-bottom: env(safe-area-inset-bottom, 0px);
             border: none;
             outline: none;
             overflow: hidden;
@@ -82,6 +95,8 @@
             backface-visibility: hidden;
             -webkit-transform: translateZ(0);
             transform: translateZ(0);
+            /* 确保没有任何边距或偏移 */
+            margin: 0;
         }
 
         /* 光斑1 - 浮动 */
@@ -140,49 +155,49 @@
                 height: -webkit-fill-available;
                 min-height: 100vh;
                 min-height: 100dvh;
-            }
-        }
-
-        /* ---------- 暗色模式（跟随系统，无需额外修改） ---------- */
-        @media (prefers-color-scheme: dark) {
-            /* 已暗色 */
-        }
-
-        /* ---------- 打印样式 ---------- */
-        @media print {
-            .wallpaper-container {
-                filter: none !important;
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+                box-sizing: content-box;
             }
         }
 
         /* ---------- 针对 iOS 18 的特殊修补 ---------- */
         @supports (-webkit-touch-callout: none) {
             .wallpaper-container {
+                /* 使用 -webkit-fill-available 确保在 iOS 上正确填充 */
                 height: -webkit-fill-available;
-                height: 100dvh;
+                /* 但 -webkit-fill-available 可能不包括安全区域，所以添加 padding */
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+                box-sizing: content-box;
+                /* 同时保留 min-height 兜底 */
                 min-height: -webkit-fill-available;
                 min-height: 100dvh;
             }
         }
 
-        /* 安全区域补偿（兜底） */
+        /* 安全区域补偿：如果浏览器不支持 calc 加 env，至少用 padding 扩展 */
         @supports (padding: env(safe-area-inset-bottom)) {
             .wallpaper-container {
                 padding-bottom: env(safe-area-inset-bottom);
-                /* 确保背景色延伸到安全区域 */
-                background-color: #1a2540;
+                /* 背景色已覆盖，无需额外 */
+            }
+        }
+
+        /* 打印样式 */
+        @media print {
+            .wallpaper-container {
+                filter: none !important;
             }
         }
     </style>
 
-    <!-- PWA Manifest (通过 data URI 内联) -->
+    <!-- PWA Manifest (内联) -->
     <link rel="manifest" id="manifestLink">
 
     <script>
         (function() {
             'use strict';
 
-            // ============ 构建 Manifest 并转换为 data URI ============
+            // ============ 构建 Manifest ============
             const manifest = {
                 name: '动态壁纸',
                 short_name: '壁纸',
@@ -191,7 +206,7 @@
                 scope: './',
                 display: 'standalone',
                 orientation: 'portrait',
-                background_color: '#1a2540',  // 与壁纸主色一致
+                background_color: '#1a2540',  // 仅用于启动闪屏
                 theme_color: '#1a2540',
                 lang: 'zh-CN',
                 icons: [{
@@ -216,7 +231,7 @@
                 link.href = manifestUrl;
             }
 
-            // ============ Service Worker (增强离线体验) ============
+            // ============ Service Worker (离线缓存) ============
             if ('serviceWorker' in navigator) {
                 const swCode = `
                         const CACHE_NAME = 'wallpaper-pwa-v1';
@@ -294,29 +309,38 @@
                 lastTouchEnd = now;
             }, { passive: false });
 
-            // ============ 监听视口变化，确保适配 ============
+            // ============ 监听尺寸变化，动态刷新（兜底） ============
             let resizeTimer = null;
+            const adjustContainer = () => {
+                const container = document.getElementById('wallpaperContainer');
+                if (!container) return;
+                // 强制重绘，确保 padding 生效（无需额外操作）
+            };
+
             window.addEventListener('resize', () => {
                 if (resizeTimer) {
                     cancelAnimationFrame(resizeTimer);
                 }
                 resizeTimer = requestAnimationFrame(() => {
+                    adjustContainer();
                     resizeTimer = null;
                 });
             }, { passive: true });
 
             window.addEventListener('orientationchange', () => {
                 setTimeout(() => {
+                    adjustContainer();
                     const container = document.getElementById('wallpaperContainer');
                     if (container) {
-                        void container.offsetHeight;
+                        void container.offsetHeight; // 强制 reflow
                     }
                 }, 300);
             }, { passive: true });
 
-            console.log('🖼️ 全屏动态壁纸已启动 (PWA 深度适配版)');
-            console.log('   · 底部安全区域已通过 padding 和背景色覆盖');
-            console.log('   · html/body 背景色与容器一致，消除黑色区域');
+            console.log('🖼️ 全屏动态壁纸已启动 (物理全覆盖，无背景色伪装)');
+            console.log('   · 容器高度 = 视口高度 + 底部安全区域');
+            console.log('   · 背景覆盖整个 border-box，包括 padding 区域');
+            console.log('   · 适用于 iOS 18 PWA 独立模式');
         })();
     </script>
 </head>
